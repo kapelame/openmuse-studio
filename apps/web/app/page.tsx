@@ -283,6 +283,11 @@ export default function Home() {
 
   return (
     <div className="shell">
+      <header className="window-bar">
+        <div className="window-controls" aria-hidden="true"><i /><i /><i /></div>
+        <div className="window-title"><span>OpenMuse Studio</span><small>Local AI music workspace</small></div>
+        <div className="window-meta"><span className="window-sync"><i /> Local runtime</span><span className="window-shortcut">⌘ K</span></div>
+      </header>
       <aside className="icon-rail" aria-label="Primary navigation">
         <div className="icon-rail-brand"><span className="mark" /></div>
         <nav className="icon-nav">
