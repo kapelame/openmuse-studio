@@ -5,13 +5,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/codespaces/new?ref=main"><img src="https://github.com/codespaces/badge.svg" alt="Open in GitHub Codespaces" /></a>
+  <a href="https://codespaces.new/kapelame/openmuse-studio?quickstart=1"><img src="https://github.com/codespaces/badge.svg" alt="Open in GitHub Codespaces" /></a>
   <a href="#docker-one-click"><img src="https://img.shields.io/badge/Run%20with%20Docker-2496ED?logo=docker&logoColor=white" alt="Run with Docker" /></a>
 </p>
 
 > **一键启动**：在 GitHub 仓库页面点击 **Open in GitHub Codespaces**，或在本机运行 `./start.sh`。Codespaces 会自动安装轻量依赖、转发 3000/8000 端口，并打开工作台。
 
-如果这个仓库还没有发布到 GitHub，Codespaces 按钮会先让 GitHub 选择仓库。发布后可将按钮链接替换为 `https://codespaces.new/<OWNER>/<REPO>?quickstart=1`，即可直接进入本仓库。
+Codespaces 按钮已绑定到 `kapelame/openmuse-studio`，点击后会直接基于仓库中的 `.devcontainer` 创建开发环境。
 
 OpenMuse Studio is an open-source AI music workspace that turns text, humming, demos and songs into finished tracks, synchronized lyrics, cover art and music videos.
 
