@@ -12,10 +12,10 @@ from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadF
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
-from .config import settings
+from .config import public_runtime_settings, save_runtime_settings, settings
 from .db import db, utc_now
 from .providers import provider_registry
-from .schemas import CreateProjectRequest, EditCommandRequest, RenderRequest, UpdateLyricsRequest
+from .schemas import CreateProjectRequest, EditCommandRequest, RenderRequest, UpdateLyricsRequest, UpdateSettingsRequest
 from .services.analysis import analyze_audio
 from .services.media import MediaError, asset_url, safe_storage_path, sha256_file, validate_media
 from .services.planner import mock_edit_plan
@@ -157,9 +157,37 @@ async def health() -> dict[str, Any]:
 @app.get("/api/providers")
 async def providers() -> dict[str, Any]:
     result = {}
-    for name, provider in provider_registry().items():
-        result[name] = {"name": name, "model": provider.model, "capabilities": (await provider.capabilities()).__dict__}
+    for kind in ("music", "image"):
+        result[kind] = {}
+        for name, provider in provider_registry(kind).items():
+            capabilities = await provider.capabilities() if hasattr(provider, "capabilities") else {}
+            result[kind][name] = {
+                "name": name,
+                "model": getattr(provider, "model", name),
+                "capabilities": capabilities.__dict__ if hasattr(capabilities, "__dict__") else capabilities,
+            }
     return {"default": settings.default_music_provider, "providers": result}
+
+
+@app.get("/api/settings")
+async def get_settings() -> dict[str, Any]:
+    return {"settings": public_runtime_settings(), "providers": await providers()}
+
+
+@app.put("/api/settings")
+async def update_settings(request: UpdateSettingsRequest) -> dict[str, Any]:
+    updates = request.model_dump(exclude_none=True)
+    clear_key = bool(updates.pop("clear_minimax_api_key", False))
+    supplied_key = updates.get("minimax_api_key")
+    if supplied_key is not None:
+        if supplied_key:
+            updates["minimax_api_key"] = supplied_key
+        else:
+            updates.pop("minimax_api_key", None)
+    if clear_key:
+        updates["minimax_api_key"] = ""
+    save_runtime_settings(updates)
+    return {"settings": public_runtime_settings(), "providers": await providers()}
 
 
 @app.get("/api/projects")

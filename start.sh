@@ -14,10 +14,91 @@ API_PORT="${OPENMUSE_API_PORT:-8000}"
 WEB_PORT="${OPENMUSE_WEB_PORT:-3000}"
 API_URL="http://127.0.0.1:${API_PORT}"
 WEB_URL="http://127.0.0.1:${WEB_PORT}"
+FORCE_SETUP="${OPENMUSE_FORCE_SETUP:-0}"
+if [ "${1:-}" = "--setup" ]; then
+  FORCE_SETUP=1
+fi
 
 say() { printf '[openmuse] %s\n' "$*"; }
 warn() { printf '[openmuse] warning: %s\n' "$*" >&2; }
 die() { printf '[openmuse] error: %s\n' "$*" >&2; exit 1; }
+
+first_run_setup() {
+  local marker="$ROOT_DIR/.openmuse/setup-complete"
+  local settings_file="$ROOT_DIR/.openmuse/settings.json"
+  local answer=""
+  local provider="mock"
+  local api_key=""
+  local api_base="https://api.minimaxi.com"
+  local music_model="music-2.6"
+  local cover_model="music-cover"
+
+  if [ "$FORCE_SETUP" != "1" ] && { [ -f "$marker" ] || [ -f "$settings_file" ]; }; then
+    return
+  fi
+  if [ ! -t 0 ] || [ ! -t 1 ]; then
+    say "non-interactive install detected; skipping setup prompt"
+    say "configure providers later from the OpenMuse UI"
+    return
+  fi
+
+  printf '\n[openmuse] First-run setup\n'
+  printf '[openmuse] This is optional. You can change these values later in Settings / Providers.\n'
+  IFS= read -r -p "Use MiniMax as the music provider now? [y/N] " answer || answer=""
+  case "$(printf '%s' "$answer" | tr '[:upper:]' '[:lower:]')" in
+    y|yes)
+      provider="minimax"
+      IFS= read -r -s -p "MiniMax API Key (hidden input): " api_key || api_key=""
+      printf '\n'
+      IFS= read -r -p "MiniMax API Base [$api_base]: " answer || answer=""
+      [ -n "$answer" ] && api_base="$answer"
+      IFS= read -r -p "Music model [$music_model]: " answer || answer=""
+      [ -n "$answer" ] && music_model="$answer"
+      IFS= read -r -p "Cover model [$cover_model]: " answer || answer=""
+      [ -n "$answer" ] && cover_model="$answer"
+      ;;
+    *)
+      printf '[openmuse] keeping Mock Provider; no API key was requested.\n'
+      ;;
+  esac
+
+  OPENMUSE_SETUP_PROVIDER="$provider" \
+  OPENMUSE_SETUP_API_KEY="$api_key" \
+  OPENMUSE_SETUP_API_BASE="$api_base" \
+  OPENMUSE_SETUP_MUSIC_MODEL="$music_model" \
+  OPENMUSE_SETUP_COVER_MODEL="$cover_model" \
+  python3 - "$settings_file" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+path.parent.mkdir(parents=True, exist_ok=True)
+existing = {}
+if path.exists():
+    try:
+        existing = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        existing = {}
+existing.update(
+    {
+        "default_music_provider": os.environ["OPENMUSE_SETUP_PROVIDER"],
+        "minimax_api_key": os.environ["OPENMUSE_SETUP_API_KEY"],
+        "minimax_api_base": os.environ["OPENMUSE_SETUP_API_BASE"],
+        "minimax_music_model": os.environ["OPENMUSE_SETUP_MUSIC_MODEL"],
+        "minimax_cover_model": os.environ["OPENMUSE_SETUP_COVER_MODEL"],
+    }
+)
+temporary = path.with_suffix(".json.tmp")
+temporary.write_text(json.dumps(existing, ensure_ascii=True, indent=2) + "\n", encoding="utf-8")
+os.chmod(temporary, 0o600)
+temporary.replace(path)
+PY
+  touch "$marker"
+  chmod 600 "$marker" "$settings_file"
+  say "setup saved locally; secrets are not sent to the frontend or database"
+}
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || die "Missing '$1'. Install it and run ./start.sh again."
@@ -96,6 +177,8 @@ if [ ! -f "$ENV_FILE" ]; then
   cp "$ROOT_DIR/.env.example" "$ENV_FILE"
   say "created .env from .env.example"
 fi
+
+first_run_setup
 
 if [ ! -d "$ROOT_DIR/.venv" ]; then
   say "installing Python dependencies"

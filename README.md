@@ -71,6 +71,14 @@ OPENMUSE_WEB_PORT=3001 ./start.sh
 
 On macOS, double-click `OpenMuse.command` to start the workspace in Terminal.
 
+首次在本地终端启动时，`start.sh` 会暂停一次询问是否现在配置 MiniMax。输入 API Key 时使用隐藏输入；选择 Mock 或直接回车即可跳过。非交互环境（Codespaces 自动钩子、CI、后台脚本）不会被这个问询阻塞。
+
+需要重新打开安装问询时：
+
+```bash
+./start.sh --setup
+```
+
 ### GitHub Codespaces
 
 1. 点击仓库顶部的 **Open in GitHub Codespaces** 按钮。
@@ -146,6 +154,17 @@ DEFAULT_MUSIC_PROVIDER=minimax
 The adapter targets the documented lyrics generation, music generation and music cover preprocess paths. It sends timeouts, handles non-2xx/base response errors, records trace IDs in returned metadata, retries 429/transient 5xx with exponential backoff, and never logs the Authorization header. URL outputs must be downloaded by the caller into project storage; hex output must pass strict decoding before being persisted.
 
 The UI exposes MiniMax only when selected and still disables unsupported continuation, stems, voice conversion and other operations. Model names are environment-driven; the UI label “Music 3.0” is not used as an API model name.
+
+## Runtime Settings
+
+启动后可在左侧 `Providers` 或顶部 `Settings` 打开 Provider 设置面板，随时修改：
+
+- Mock / MiniMax / Custom HTTP 默认 Provider
+- MiniMax API Base、音乐模型和封面模型
+- Custom HTTP endpoint
+- 本地 ASR、Demucs、Basic Pitch 开关
+
+设置写入本地 `.openmuse/settings.json`，文件会被 `.gitignore` 忽略并使用 `0600` 权限。MiniMax API Key 只允许写入或清除，不会回传给前端、写入数据库、项目 manifest 或普通日志。保存后新的任务立即使用新设置；已有运行中的任务不会被强行改写。
 
 ## Optional Audio Capabilities
 

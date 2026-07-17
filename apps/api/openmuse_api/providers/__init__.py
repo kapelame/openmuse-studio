@@ -5,24 +5,52 @@ from packages.providers.minimax import MiniMaxMusicProvider
 from packages.providers.mock import MockMusicProvider
 from packages.providers.registry import ProviderRegistry
 
-from ..config import settings
-
-
-def music_provider() -> MusicProvider:
-    if settings.default_music_provider == "minimax":
-        return MiniMaxMusicProvider(settings.minimax_api_key, settings.minimax_api_base, settings.minimax_music_model, settings.minimax_cover_model)
-    return MockMusicProvider()
+from ..config import reload_runtime_settings, settings
 
 
 registry = ProviderRegistry()
-registry.register("music", "mock", MockMusicProvider())
-registry.register("music", "minimax", MiniMaxMusicProvider(settings.minimax_api_key, settings.minimax_api_base, settings.minimax_music_model, settings.minimax_cover_model))
-registry.register("image", "mock", MockImageProvider())
-if settings.custom_music_endpoint:
-    registry.register("music", "custom-http", CustomHTTPMusicProvider(settings.custom_music_endpoint))
-if settings.custom_image_endpoint:
-    registry.register("image", "custom-http", CustomHTTPImageProvider(settings.custom_image_endpoint))
+_registry_signature: tuple[object, ...] | None = None
 
 
-def provider_registry() -> dict[str, MusicProvider]:
-    return registry.all("music")
+def refresh_provider_registry() -> ProviderRegistry:
+    global registry, _registry_signature
+    reload_runtime_settings()
+    signature = (
+        settings.minimax_api_key,
+        settings.minimax_api_base,
+        settings.minimax_music_model,
+        settings.minimax_cover_model,
+        settings.custom_music_endpoint,
+        settings.custom_image_endpoint,
+    )
+    if signature == _registry_signature:
+        return registry
+
+    next_registry = ProviderRegistry()
+    next_registry.register("music", "mock", MockMusicProvider())
+    next_registry.register(
+        "music",
+        "minimax",
+        MiniMaxMusicProvider(
+            settings.minimax_api_key,
+            settings.minimax_api_base,
+            settings.minimax_music_model,
+            settings.minimax_cover_model,
+        ),
+    )
+    next_registry.register("image", "mock", MockImageProvider())
+    if settings.custom_music_endpoint:
+        next_registry.register("music", "custom-http", CustomHTTPMusicProvider(settings.custom_music_endpoint))
+    if settings.custom_image_endpoint:
+        next_registry.register("image", "custom-http", CustomHTTPImageProvider(settings.custom_image_endpoint))
+    registry = next_registry
+    _registry_signature = signature
+    return registry
+
+
+def music_provider() -> MusicProvider:
+    return refresh_provider_registry().get("music", settings.default_music_provider)
+
+
+def provider_registry(kind: str = "music") -> dict[str, MusicProvider]:
+    return refresh_provider_registry().all(kind)

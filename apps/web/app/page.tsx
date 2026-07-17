@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 
 // Keep browser requests same-origin so localhost, Docker and Codespaces all work.
 const API = process.env.NEXT_PUBLIC_API_BASE || "";
@@ -9,6 +9,9 @@ type Asset = { id: string; type: string; role: string; original_filename: string
 type LyricCue = { start_ms: number; end_ms: number; text: string; style?: string };
 type LyricsDocument = { id: string; canonical_text: string; structured_lyrics: LyricCue[]; title: string };
 type Project = { id: string; title: string; description?: string; creation_mode: string; status: string; assets: Asset[]; lyrics?: LyricsDocument[]; renders?: Array<{ status: string; output_asset_id?: string }> };
+type RuntimeSettings = { default_music_provider: string; default_image_provider: string; minimax_api_base: string; minimax_music_model: string; minimax_cover_model: string; minimax_api_key_configured: boolean; custom_music_endpoint: string; custom_image_endpoint: string; enable_local_asr: boolean; enable_demucs: boolean; enable_basic_pitch: boolean; settings_file: string };
+type ProviderInfo = { name: string; model: string; capabilities: Record<string, boolean> };
+type SettingsResponse = { settings: RuntimeSettings; providers: { default: string; providers: { music: Record<string, ProviderInfo>; image: Record<string, ProviderInfo> } } };
 
 const entries = [
   ["01", "Describe a song", "Text to Song", "text"],
@@ -25,6 +28,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [command, setCommand] = useState("");
   const [job, setJob] = useState<{ id: string; kind?: string; status: string; progress: number } | null>(null);
+  const [settings, setSettings] = useState<SettingsResponse | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   async function loadProjects() {
     const response = await fetch(`${API}/api/projects`);
@@ -40,7 +45,16 @@ export default function Home() {
     setLoading(false);
   }
 
-  useEffect(() => { loadProjects().catch(() => { setToast("API unavailable. Start the FastAPI service on port 8000."); setLoading(false); }); }, []);
+  async function loadSettings() {
+    const response = await fetch(`${API}/api/settings`);
+    if (!response.ok) throw new Error("Settings unavailable");
+    setSettings(await response.json());
+  }
+
+  useEffect(() => {
+    loadProjects().catch(() => { setToast("API unavailable. Start the FastAPI service on port 8000."); setLoading(false); });
+    loadSettings().catch(() => setToast("Provider settings are unavailable until the API is running."));
+  }, []);
 
   useEffect(() => {
     if (!job || job.status === "succeeded" || job.status === "failed" || job.status === "cancelled") return;
@@ -90,6 +104,17 @@ export default function Home() {
     setJob(result.job); setToast("Audio analysis queued. Estimates keep their confidence labels.");
   }
 
+  async function openSettings() {
+    setSettingsOpen(true);
+    try { await loadSettings(); } catch { setToast("Could not load provider settings."); }
+  }
+
+  function handleSettingsSaved(next: SettingsResponse) {
+    setSettings(next);
+    setSettingsOpen(false);
+    setToast("Provider settings saved. New jobs use the updated configuration.");
+  }
+
   function updateCues(next: LyricCue[]) {
     if (!selected || !selected.lyrics?.[0]) return;
     setSelected({ ...selected, lyrics: [{ ...selected.lyrics[0], structured_lyrics: next }, ...selected.lyrics.slice(1)] });
@@ -117,17 +142,18 @@ export default function Home() {
   return <div className="shell">
     <aside className="rail">
       <div className="wordmark"><span className="mark" /> <span>OpenMuse</span></div>
-      <nav className="rail-nav"><button className="active">Workspace</button><button>Jobs <span className="eyebrow">{job ? "active" : ""}</span></button><button>Templates</button><button>Providers</button></nav>
+      <nav className="rail-nav"><button className="active">Workspace</button><button>Jobs <span className="eyebrow">{job ? "active" : ""}</span></button><button>Templates</button><button onClick={openSettings}>Providers</button></nav>
       <div><div className="eyebrow" style={{ marginBottom: 10 }}>Projects</div><div className="project-list">{projects.map((project) => <button key={project.id} className={`project-item ${selected?.id === project.id ? "active" : ""}`} onClick={() => fetch(`${API}/api/projects/${project.id}`).then((r) => r.json()).then(setSelected)}><span className="project-dot" /><span className="project-name">{project.title}</span></button>)}</div></div>
       <div className="rail-footer"><span>Open-source music workspace</span><span>v0.1 · mock-ready</span></div>
     </aside>
     <main className="main">
-      <header className="topbar"><div><h1>{selected?.title || "New music workspace"}</h1><small>{selected ? "Autosaved locally · portable by default" : "Start from an idea, demo, or finished song"}</small></div><div className="top-actions"><span className="status">Mock provider ready</span><button className="button primary" onClick={() => setModal("new")}>New project</button></div></header>
+      <header className="topbar"><div><h1>{selected?.title || "New music workspace"}</h1><small>{selected ? "Autosaved locally · portable by default" : "Start from an idea, demo, or finished song"}</small></div><div className="top-actions"><button className="button ghost" onClick={openSettings}>Settings</button><span className={`status ${settings?.settings.default_music_provider === "minimax" && !settings.settings.minimax_api_key_configured ? "warn" : ""}`}>{settings ? `${settings.settings.default_music_provider} provider` : "Provider loading"}</span><button className="button primary" onClick={() => setModal("new")}>New project</button></div></header>
       {!selected && !loading && <><section className="hero"><div className="eyebrow">OpenMuse Studio / Music 3.0 interface</div><h2>Make the song, then make the world around it.</h2><p>Turn text, humming, demos and songs into a finished track, synchronized lyrics, cover art and a stable lyric video. Every output remains a version you can revisit.</p></section><section className="entry-grid">{entries.map(([number, title, sub, mode]) => <button className="entry" key={mode} onClick={() => setModal(mode)}><span>{number}</span><b>{title}</b><em>{sub}</em></button>)}</section><div className="empty" style={{ maxWidth: 850, margin: "0 auto" }}>The working demo uses a deterministic Mock Provider and local FFmpeg renderer. Upload an audio file, cover and SRT/LRC to complete the first vertical loop.</div></>}
       {selected && <><section className="workspace"><div><div className="panel"><div className="panel-header"><strong>Current output</strong><span>{rendered ? "MV ready" : "Not rendered"}</span></div>{rendered ? <video controls className="preview" src={`${API}${rendered.url}`} /> : <div className="preview"><div className="preview-art" /><div className="preview-copy"><small>Editorial Lyrics · 1:1 · 24fps</small><h3>{selected.title}</h3><p>Stable crop · restrained typography · no random motion</p></div></div>}<div className="timeline"><div className="wave">{Array.from({ length: 72 }).map((_, index) => <i key={index} style={{ height: `${12 + ((index * 17) % 40)}px` }} />)}</div>{cues.length ? cues.slice(0, 6).map((cue, index) => <div className={`cue ${index === 0 ? "current" : ""}`} key={`${cue.start_ms}-${index}`}><time>{`${Math.floor(cue.start_ms / 60000)}:${String(Math.floor(cue.start_ms / 1000) % 60).padStart(2, "0")}`}</time><input aria-label={`Lyric cue ${index + 1}`} value={cue.text} onChange={(event) => updateCues(cues.map((item, cueIndex) => cueIndex === index ? { ...item, text: event.target.value } : item))} onBlur={() => void saveCues(cues)} style={{ flex: 1, minWidth: 0, border: 0, background: "transparent", color: "inherit", outline: 0 }} /><button className="button ghost" onClick={() => nudgeCue(index, -50)}>-50</button><button className="button ghost" onClick={() => nudgeCue(index, 50)}>+50</button></div>) : <div className="cue"><time>00:00</time><span>Upload SRT or LRC to populate the lyric timeline.</span></div>}</div><div className="command"><input aria-label="Describe what you want to change" placeholder="Describe what you want to change…" value={command} onChange={(event) => setCommand(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") plan(); }} /><button className="button" onClick={plan}>Plan</button></div></div></div><aside><div className="panel"><div className="panel-header"><strong>Assets</strong><span>{selected.assets?.length || 0}</span></div><div className="asset-list">{selected.assets?.map((asset) => <div className="asset" key={asset.id}><span>{asset.role.replaceAll("_", " ")}</span><span>{asset.original_filename.slice(0, 18)}</span></div>)}</div><div style={{ display: "grid", gap: 8, marginTop: 16 }}><label className="button upload">Add asset<input type="file" accept="audio/*,image/*,.srt,.lrc,.ass,.vtt" onChange={(event: ChangeEvent<HTMLInputElement>) => event.target.files?.[0] && upload(event.target.files[0])} /></label><button className="button" onClick={analyze}>{job?.kind === "analyze_audio" && job.status === "running" ? `Analyzing ${job.progress}%` : "Analyze audio"}</button><button className="button primary" onClick={render}>{job?.kind === "render_video" && job.status === "running" ? `Rendering ${job.progress}%` : "Render Editorial MV"}</button></div></div><div className="panel" style={{ marginTop: 30 }}><div className="panel-header"><strong>Pipeline</strong><span>async</span></div>{["Ingest", "Analyze", "Align", "Subtitle", "Render", "Validate"].map((stage, index) => <div className="stat" key={stage}><span>{String(index + 1).padStart(2, "0")} / {stage}</span><b>{index < (rendered ? 6 : selected.assets?.length ? 2 : 0) ? "done" : "ready"}</b></div>)}</div></aside></section><section style={{ maxWidth: 850, margin: "26px auto 0", display: "flex", gap: 8, flexWrap: "wrap" }}><label className="button upload">Upload song<input type="file" accept="audio/*" onChange={(event: ChangeEvent<HTMLInputElement>) => event.target.files?.[0] && upload(event.target.files[0], "source_audio")} /></label><label className="button upload">Upload cover<input type="file" accept="image/*" onChange={(event: ChangeEvent<HTMLInputElement>) => event.target.files?.[0] && upload(event.target.files[0], "cover")} /></label><label className="button upload">Upload SRT / LRC<input type="file" accept=".srt,.lrc,.ass,.vtt,.txt" onChange={(event: ChangeEvent<HTMLInputElement>) => event.target.files?.[0] && upload(event.target.files[0], "lyrics_timing")} /></label>{lyricDocument && <><a className="button" href={`${API}/api/projects/${selected.id}/lyrics/${lyricDocument.id}/export/srt`} download>Download SRT</a><a className="button" href={`${API}/api/projects/${selected.id}/lyrics/${lyricDocument.id}/export/ass`} download>Download ASS</a></>}{rendered && <a className="button primary" href={`${API}${rendered.url}`} download>Download MP4</a>}<a className="button" href={`${API}/api/projects/${selected.id}/manifest`} download={`openmuse-${selected.id}.json`}>Download project.json</a></section></>}
     </main>
     <aside className="side"><div className="eyebrow" style={{ marginBottom: 22 }}>Studio status</div><div className="side-section"><h4>Project</h4><div className="stat"><span>Mode</span><b>{selected?.creation_mode || "—"}</b></div><div className="stat"><span>Provider</span><b>Mock / tone-v1</b></div><div className="stat"><span>Audio</span><b>{audio ? `${Math.round(audio.duration || 0)} sec` : "missing"}</b></div></div><div className="side-section"><h4>Capabilities</h4>{["Text to song", "Lyrics to song", "Reference audio", "Continuation"].map((label, index) => <div className="stat" key={label}><span>{label}</span><b>{index === 3 ? "gated" : "ready"}</b></div>)}</div><div className="side-section"><h4>Export</h4><div className="stat"><span>Square</span><b>1080 × 1080</b></div><div className="stat"><span>Codec</span><b>H.264 / AAC</b></div><div className="stat"><span>Subtitle</span><b>{subtitle ? subtitle.original_filename.split(".").pop()?.toUpperCase() : "pending"}</b></div></div></aside>
     {modal && <NewProjectModal mode={modal} onClose={() => setModal(null)} onCreate={createProject} />}
+    {settingsOpen && settings && <ProviderSettingsModal initial={settings} onClose={() => setSettingsOpen(false)} onSaved={handleSettingsSaved} />}
     {toast && <button className="toast" onClick={() => setToast("")}>{toast}</button>}
   </div>;
 }
@@ -137,4 +163,36 @@ function NewProjectModal({ mode, onClose, onCreate }: { mode: string; onClose: (
   const [description, setDescription] = useState("");
   const [consent, setConsent] = useState(false);
   return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><form className="modal" onSubmit={(event) => { event.preventDefault(); if (consent) onCreate(title, description, mode === "new" ? "mv" : mode); }}><div className="eyebrow">Create / {mode === "new" ? "workspace" : mode}</div><h3>Start with an idea.</h3><p>This creates a versioned project. Upload your source audio, cover and timing file after creation; nothing is overwritten.</p><input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Project title" /><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the song, scene or change…" /><label style={{ display: "flex", gap: 9, alignItems: "flex-start", color: "#6f6a62", fontSize: 11, lineHeight: 1.4, marginBottom: 16 }}><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} style={{ width: 15, margin: "1px 0 0" }} />I confirm that I own this material or have permission to use it.</label><div className="modal-actions"><button type="button" className="button" onClick={onClose}>Cancel</button><button type="submit" className="button primary" disabled={!consent}>Create project</button></div></form></div>;
+}
+
+function ProviderSettingsModal({ initial, onClose, onSaved }: { initial: SettingsResponse; onClose: () => void; onSaved: (next: SettingsResponse) => void }) {
+  const [draft, setDraft] = useState({ ...initial.settings, minimax_api_key: "", clear_minimax_api_key: false });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  function update<K extends keyof typeof draft>(key: K, value: (typeof draft)[K]) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    const payload: Record<string, unknown> = { ...draft };
+    delete payload.minimax_api_key_configured;
+    delete payload.settings_file;
+    if (!draft.minimax_api_key) delete payload.minimax_api_key;
+    try {
+      const response = await fetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.detail || "Could not save settings");
+      onSaved(result);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not save settings");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><form className="modal settings-modal" onSubmit={save}><div className="eyebrow">Settings / Providers</div><h3>Change the engine anytime.</h3><p>These settings are stored locally in a permissions-restricted runtime file. API keys are write-only here and never returned to the browser.</p><div className="settings-grid"><label>Music Provider<select value={draft.default_music_provider} onChange={(event) => update("default_music_provider", event.target.value)}><option value="mock">Mock Provider</option><option value="minimax">MiniMax</option><option value="custom-http">Custom HTTP</option></select></label><label>Image Provider<select value={draft.default_image_provider} onChange={(event) => update("default_image_provider", event.target.value)}><option value="mock">Mock Image</option><option value="custom-http">Custom HTTP</option></select></label><label className="settings-wide">MiniMax API Key<input type="password" value={draft.minimax_api_key} onChange={(event) => { update("minimax_api_key", event.target.value); update("clear_minimax_api_key", false); }} placeholder={initial.settings.minimax_api_key_configured ? "Configured · leave blank to keep" : "Paste key (hidden)"} autoComplete="new-password" /></label><div className="settings-wide settings-inline"><span className={`key-state ${initial.settings.minimax_api_key_configured ? "ready" : ""}`}>{initial.settings.minimax_api_key_configured ? "MiniMax key configured" : "No MiniMax key configured"}</span><button type="button" className="button ghost" onClick={() => update("clear_minimax_api_key", true)}>Clear stored key</button></div><label>MiniMax API Base<input value={draft.minimax_api_base} onChange={(event) => update("minimax_api_base", event.target.value)} /></label><label>Music Model<input value={draft.minimax_music_model} onChange={(event) => update("minimax_music_model", event.target.value)} /></label><label>Cover Model<input value={draft.minimax_cover_model} onChange={(event) => update("minimax_cover_model", event.target.value)} /></label><label>Custom Music Endpoint<input value={draft.custom_music_endpoint} onChange={(event) => update("custom_music_endpoint", event.target.value)} placeholder="https://..." /></label><label>Custom Image Endpoint<input value={draft.custom_image_endpoint} onChange={(event) => update("custom_image_endpoint", event.target.value)} placeholder="https://..." /></label></div><div className="settings-capabilities"><strong>Optional local capabilities</strong><label><input type="checkbox" checked={draft.enable_local_asr} onChange={(event) => update("enable_local_asr", event.target.checked)} /> Local ASR / faster-whisper</label><label><input type="checkbox" checked={draft.enable_demucs} onChange={(event) => update("enable_demucs", event.target.checked)} /> Demucs stem separation</label><label><input type="checkbox" checked={draft.enable_basic_pitch} onChange={(event) => update("enable_basic_pitch", event.target.checked)} /> Basic Pitch MIDI</label></div>{error && <div className="settings-error">{error}</div>}<div className="modal-actions"><button type="button" className="button" onClick={onClose}>Cancel</button><button type="submit" className="button primary" disabled={saving}>{saving ? "Saving…" : "Save settings"}</button></div></form></div>;
 }

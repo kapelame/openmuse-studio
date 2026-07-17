@@ -72,3 +72,18 @@ class EditPlan(BaseModel):
     changes: dict[str, Any]
     jobs: list[str]
     requires_confirmation: bool = True
+
+
+class UpdateSettingsRequest(BaseModel):
+    default_music_provider: Literal["mock", "minimax", "custom-http"] | None = None
+    default_image_provider: Literal["mock", "custom-http"] | None = None
+    minimax_api_key: str | None = Field(default=None, max_length=2000)
+    clear_minimax_api_key: bool = False
+    minimax_api_base: str | None = Field(default=None, max_length=500)
+    minimax_music_model: str | None = Field(default=None, max_length=200)
+    minimax_cover_model: str | None = Field(default=None, max_length=200)
+    custom_music_endpoint: str | None = Field(default=None, max_length=1000)
+    custom_image_endpoint: str | None = Field(default=None, max_length=1000)
+    enable_local_asr: bool | None = None
+    enable_demucs: bool | None = None
+    enable_basic_pitch: bool | None = None

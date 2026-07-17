@@ -31,6 +31,7 @@ services:
     volumes:
       - ./storage:/app/storage
       - ./projects:/app/projects
+      - ./.openmuse:/app/.openmuse
     depends_on:
       - postgres
       - redis
@@ -44,6 +45,7 @@ services:
     volumes:
       - ./storage:/app/storage
       - ./projects:/app/projects
+      - ./.openmuse:/app/.openmuse
     depends_on:
       - api
       - redis
