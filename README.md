@@ -1,21 +1,18 @@
 # OpenMuse Studio
 
-<p align="center">
-  <strong>Open-source AI music workspace for songs, lyrics, cover art and stable lyric videos.</strong>
-</p>
+Open-source AI music workspace for turning ideas, lyrics, demos, and songs into tracks, lyric videos, and release assets.
 
 <p align="center">
   <a href="https://codespaces.new/kapelame/openmuse-studio?quickstart=1"><img src="https://github.com/codespaces/badge.svg" alt="Open in GitHub Codespaces" /></a>
   <a href="#docker-one-click"><img src="https://img.shields.io/badge/Run%20with%20Docker-2496ED?logo=docker&logoColor=white" alt="Run with Docker" /></a>
 </p>
 
-> **一键启动**：在 GitHub 仓库页面点击 **Open in GitHub Codespaces**，或在本机运行 `./start.sh`。Codespaces 会自动安装轻量依赖、转发 3000/8000 端口，并打开工作台。
+## What it does
 
-Codespaces 按钮已绑定到 `kapelame/openmuse-studio`，点击后会直接基于仓库中的 `.devcontainer` 创建开发环境。
-
-OpenMuse Studio is an open-source AI music workspace that turns text, humming, demos and songs into finished tracks, synchronized lyrics, cover art and music videos.
-
-The repository is deliberately honest about provider capabilities. The default Mock Provider gives a complete, deterministic local workflow for project creation, asset upload, subtitle timing and stable lyric-video rendering. It does not pretend that a tone fixture is a music model. MiniMax integration is opt-in through environment variables and unsupported operations remain capability-gated.
+- Create from text, lyrics, humming, demos, or finished songs.
+- Align lyrics and render stable lyric videos with FFmpeg.
+- Export MP4, subtitles, cover art, and project manifests.
+- Run locally with Mock Provider; connect MiniMax when configured.
 
 ## Current Status
 
@@ -30,9 +27,9 @@ Implemented and runnable now:
 - Mock Music Provider, MiniMax Music Provider adapter, explicit capabilities, Mock Planner and release-pack manifest generation.
 - Optional lightweight audio analysis: ffprobe metadata, waveform peaks, sample RMS and loudness-style signal. BPM, key, F0, MIDI, stems and chords stay optional/capability-gated.
 - CLI commands for `analyze`, `align`, `render`, `pipeline` and release manifests.
-- 10 automated tests covering parsers, timecodes, media validation, provider capabilities, rendering and API smoke flow.
+- 17 automated tests covering parsers, media validation, provider capabilities, settings, rendering and API smoke flow.
 
-Clearly not implemented in the starter:
+Not included by default:
 
 - Real local ASR/WhisperX alignment, Demucs stem separation and Basic Pitch MIDI extraction. Install optional extras and add workers before enabling them.
 - A full multi-track DAW, word-level timeline editor, visual-story shot planner and true continuation/voice conversion.
