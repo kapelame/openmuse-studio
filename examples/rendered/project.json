@@ -1,0 +1,25 @@
+{
+  "pipeline": [
+    "INGEST",
+    "ANALYZE",
+    "ALIGN",
+    "SUBTITLE",
+    "RENDER",
+    "VALIDATE"
+  ],
+  "render": {
+    "duration": 12.0,
+    "width": 1080,
+    "height": 1080,
+    "fps": "24/1",
+    "video_codec": "h264",
+    "pixel_format": "yuv420p",
+    "audio_codec": "aac",
+    "sample_rate": "44100",
+    "channels": 2,
+    "has_video": true,
+    "has_audio": true,
+    "ass_path": "examples/rendered/mv.ass"
+  },
+  "api_keys_included": false
+}

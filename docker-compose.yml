@@ -1,0 +1,87 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    environment: &openmuse-env
+      APP_NAME: ${APP_NAME:-OpenMuse Studio}
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////app/projects/openmuse.db}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minio}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-miniosecret}
+      S3_BUCKET: ${S3_BUCKET:-openmuse}
+      STORAGE_ROOT: ${STORAGE_ROOT:-/app/storage}
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
+      MINIMAX_API_BASE: ${MINIMAX_API_BASE:-https://api.minimaxi.com}
+      MINIMAX_MUSIC_MODEL: ${MINIMAX_MUSIC_MODEL:-music-2.6}
+      MINIMAX_COVER_MODEL: ${MINIMAX_COVER_MODEL:-music-cover}
+      DEFAULT_MUSIC_PROVIDER: ${DEFAULT_MUSIC_PROVIDER:-mock}
+      DEFAULT_IMAGE_PROVIDER: ${DEFAULT_IMAGE_PROVIDER:-mock}
+      CUSTOM_MUSIC_ENDPOINT: ${CUSTOM_MUSIC_ENDPOINT:-}
+      CUSTOM_IMAGE_ENDPOINT: ${CUSTOM_IMAGE_ENDPOINT:-}
+      ENABLE_LOCAL_ASR: ${ENABLE_LOCAL_ASR:-false}
+      ENABLE_DEMUCS: ${ENABLE_DEMUCS:-false}
+      ENABLE_BASIC_PITCH: ${ENABLE_BASIC_PITCH:-false}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-104857600}
+      MAX_AUDIO_SECONDS: ${MAX_AUDIO_SECONDS:-900}
+    ports:
+      - "${OPENMUSE_API_PORT:-8000}:8000"
+    volumes:
+      - ./storage:/app/storage
+      - ./projects:/app/projects
+    depends_on:
+      - postgres
+      - redis
+      - minio
+  worker:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    command: ["uv", "run", "python", "-m", "apps.api.openmuse_api.worker"]
+    environment: *openmuse-env
+    volumes:
+      - ./storage:/app/storage
+      - ./projects:/app/projects
+    depends_on:
+      - api
+      - redis
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        OPENMUSE_API_INTERNAL: http://api:8000
+    environment:
+      OPENMUSE_API_INTERNAL: http://api:8000
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-}
+    ports:
+      - "${OPENMUSE_WEB_PORT:-3000}:3000"
+    depends_on:
+      - api
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: openmuse
+      POSTGRES_PASSWORD: openmuse
+      POSTGRES_DB: openmuse
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  redis:
+    image: redis:7-alpine
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: miniosecret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  postgres_data:
+  minio_data:

@@ -1,0 +1,12 @@
+.git
+.venv
+node_modules
+apps/web/node_modules
+apps/web/.next
+storage
+projects
+openmuse.db
+*.sqlite3
+examples/rendered
+__pycache__
+*.pyc

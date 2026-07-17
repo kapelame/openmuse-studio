@@ -1,0 +1,41 @@
+name: OpenMuse CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install system media tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Install Python dependencies
+        run: uv sync
+      - name: Install web dependencies
+        run: npm --prefix apps/web ci
+      - name: Python tests
+        run: uv run pytest
+      - name: Python compile check
+        run: uv run python -m compileall apps/api cli packages tests
+      - name: Frontend typecheck
+        run: npm --prefix apps/web run typecheck
+      - name: Frontend production build
+        run: npm --prefix apps/web run build
+      - name: FFmpeg render smoke test
+        run: uv run openmuse pipeline --audio examples/demo-tone.wav --cover examples/demo-cover.png --lyrics examples/demo.srt --template editorial-lyrics --aspect 1:1 --output /tmp/openmuse-render
+      - name: Probe rendered media
+        run: ffprobe -v error -show_entries stream=codec_name,width,height,pix_fmt,r_frame_rate -show_entries format=duration -of json /tmp/openmuse-render/mv.mp4

@@ -1,0 +1,17 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1080
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Lyrics,Arial,52,&H00E8F0F4,&H00FFFFFF,&H00000000,&H66000000,0,0,0,0,100,100,0,0,1,0,0.8,1,97,97,130,1
+Style: Title,Arial,34,&H00E8F0F4,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,1,97,97,86,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,00:00.000,00:03.200,Lyrics,,0,0,0,,The room is quiet, the\Nnight is wide
+Dialogue: 0,00:03.200,00:06.800,Lyrics,,0,0,0,,I leave a little light\Non inside
+Dialogue: 0,00:06.800,00:09.700,Lyrics,,0,0,0,,No perfect words, just\None more try
+Dialogue: 0,00:09.700,00:12.000,Lyrics,,0,0,0,,Open the window, let\Nthe song arrive
