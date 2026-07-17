@@ -283,11 +283,6 @@ export default function Home() {
 
   return (
     <div className="shell">
-      <header className="window-bar">
-        <div className="window-controls" aria-hidden="true"><i /><i /><i /></div>
-        <div className="window-title"><span>OpenMuse Studio</span><small>Local AI music workspace</small></div>
-        <div className="window-meta"><span className="window-sync"><i /> Local runtime</span><span className="window-shortcut">⌘ K</span></div>
-      </header>
       <aside className="icon-rail" aria-label="Primary navigation">
         <div className="icon-rail-brand"><span className="mark" /></div>
         <nav className="icon-nav">
@@ -307,8 +302,6 @@ export default function Home() {
         <div className="navigator-title"><div><strong>Music workspace</strong><span>Local project library</span></div><button className="mini-button" onClick={() => setModal("new")} aria-label="Create project" title="Create project">+</button></div>
         <button className="new-project-row" onClick={() => setModal("new")}><span>+</span> New project</button>
         <div className="navigator-section"><div className="eyebrow">Projects from API</div><div className="project-list">{projects.map((project) => <button key={project.id} className={`project-item ${selected?.id === project.id ? "active" : ""}`} onClick={() => void selectProject(project.id)}><span className="project-dot" /><span className="project-name">{project.title}</span><small>{statusLabel(project.status)}</small></button>)}</div>{!projects.length && <div className="navigator-empty">Your projects will appear here.</div>}</div>
-        <div className="navigator-section navigator-links"><button><span>⌁</span> All jobs</button><button><span>▤</span> Templates</button><button onClick={openSettings}><span>⚙</span> Providers</button></div>
-        <div className="rail-footer"><span>Open-source music workspace</span><span>API-backed local runtime</span></div>
       </aside>
 
       <main className="main studio-main">
@@ -329,15 +322,13 @@ export default function Home() {
 
         {!selected && !loading && (
           <div className="welcome-stage">
-            <section className="hero"><div className="assistant-orb"><span>OM</span></div><div className="eyebrow">OpenMuse Studio / API workspace</div><h2>What should we make today?</h2><p>Start with a description, a melody, a demo, or a finished song. OpenMuse keeps every asset, edit and render connected to one project.</p></section>
+            <section className="hero"><div className="eyebrow">OpenMuse Studio / API workspace</div><h2>What should we make today?</h2><p>Start with a description, a melody, a demo, or a finished song.</p></section>
             <section className="entry-grid">{entries.map(([number, title, sub, mode]) => <button className="entry" key={mode} onClick={() => setModal(mode)}><span>{number}</span><b>{title}</b><em>{sub}</em></button>)}</section>
-            <button className="welcome-composer" onClick={() => setModal("text")}><span className="composer-plus">+</span><span className="composer-placeholder">Describe a song, attach a demo, or ask for an MV...</span><kbd>Enter</kbd></button>
           </div>
         )}
 
         {selected && (
           <>
-            <section className="session-banner"><div className="assistant-avatar">OM</div><div><strong>OpenMuse Studio</strong><p>{selected.description || "This project is ready for your next instruction."}</p></div><span>{activeJob ? `${statusLabel(activeJob.status)} ${activeJob.progress}%` : "ready"}</span></section>
             <section className="workspace">
               <div>
                 <div className="panel">
