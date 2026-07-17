@@ -30,7 +30,7 @@ first_run_setup() {
   local provider="mock"
   local api_key=""
   local api_base="https://api.minimaxi.com"
-  local music_model="music-2.6"
+  local music_model="music-3.0"
   local cover_model="music-cover"
 
   if [ "$FORCE_SETUP" != "1" ] && { [ -f "$marker" ] || [ -f "$settings_file" ]; }; then

@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     storage_root: Path = Path("./storage")
     minimax_api_key: str = ""
     minimax_api_base: str = "https://api.minimaxi.com"
-    minimax_music_model: str = "music-2.6"
+    minimax_music_model: str = "music-3.0"
     minimax_cover_model: str = "music-cover"
     default_music_provider: str = "mock"
     default_image_provider: str = "mock"
