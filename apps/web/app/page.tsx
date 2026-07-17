@@ -283,32 +283,33 @@ export default function Home() {
 
   return (
     <div className="shell">
-      <aside className="rail">
-        <div className="wordmark"><span className="mark" /> <span>OpenMuse</span></div>
-        <nav className="rail-nav">
-          <button className="active">Workspace</button>
-          <button>Jobs <span className="eyebrow">{activeJob ? statusLabel(activeJob.status) : ""}</span></button>
-          <button>Templates</button>
-          <button onClick={openSettings}>Providers</button>
+      <aside className="icon-rail" aria-label="Primary navigation">
+        <div className="icon-rail-brand"><span className="mark" /></div>
+        <nav className="icon-nav">
+          <button className="icon-button active" aria-label="Workspace" title="Workspace"><span>⌂</span></button>
+          <button className="icon-button" aria-label="Projects" title="Projects"><span>▦</span></button>
+          <button className="icon-button" aria-label="Jobs" title="Jobs"><span>◌</span>{activeJob && <i />}</button>
+          <button className="icon-button" aria-label="Templates" title="Templates"><span>✦</span></button>
         </nav>
-        <div>
-          <div className="eyebrow" style={{ marginBottom: 10 }}>Projects from API</div>
-          <div className="project-list">
-            {projects.map((project) => (
-              <button key={project.id} className={`project-item ${selected?.id === project.id ? "active" : ""}`} onClick={() => void selectProject(project.id)}>
-                <span className="project-dot" />
-                <span className="project-name">{project.title}</span>
-                <small>{statusLabel(project.status)}</small>
-              </button>
-            ))}
-          </div>
+        <div className="icon-nav icon-nav-bottom">
+          <button className="icon-button" aria-label="Providers" title="Providers" onClick={openSettings}><span>⚙</span></button>
+          <button className="avatar-button" aria-label="OpenMuse local workspace" title="OpenMuse local workspace">O</button>
         </div>
+      </aside>
+
+      <aside className="rail navigator">
+        <div className="navigator-header"><div className="wordmark"><span className="mark" /> <span>OpenMuse</span></div><button className="mini-button" aria-label="Collapse navigator" title="Collapse navigator">‹</button></div>
+        <div className="navigator-title"><div><strong>Music workspace</strong><span>Local project library</span></div><button className="mini-button" onClick={() => setModal("new")} aria-label="Create project" title="Create project">+</button></div>
+        <button className="new-project-row" onClick={() => setModal("new")}><span>+</span> New project</button>
+        <div className="navigator-section"><div className="eyebrow">Projects from API</div><div className="project-list">{projects.map((project) => <button key={project.id} className={`project-item ${selected?.id === project.id ? "active" : ""}`} onClick={() => void selectProject(project.id)}><span className="project-dot" /><span className="project-name">{project.title}</span><small>{statusLabel(project.status)}</small></button>)}</div>{!projects.length && <div className="navigator-empty">Your projects will appear here.</div>}</div>
+        <div className="navigator-section navigator-links"><button><span>⌁</span> All jobs</button><button><span>▤</span> Templates</button><button onClick={openSettings}><span>⚙</span> Providers</button></div>
         <div className="rail-footer"><span>Open-source music workspace</span><span>API-backed local runtime</span></div>
       </aside>
 
-      <main className="main">
+      <main className="main studio-main">
         <header className="topbar">
-          <div>
+          <div className="title-stack">
+            <span className="eyebrow">Studio / {selected ? selected.creation_mode : "new session"}</span>
             <h1>{selected?.title || "New music workspace"}</h1>
             <small>{selected ? `Saved in the local API · ${selected.status}` : "Start from an idea, demo, or finished song"}</small>
           </div>
@@ -322,15 +323,16 @@ export default function Home() {
         </header>
 
         {!selected && !loading && (
-          <>
-            <section className="hero"><div className="eyebrow">OpenMuse Studio / API workspace</div><h2>Make the song, then make the world around it.</h2><p>Turn text, humming, demos and songs into a finished track, synchronized lyrics, cover art and a stable lyric video. Every output remains a version you can revisit.</p></section>
+          <div className="welcome-stage">
+            <section className="hero"><div className="assistant-orb"><span>OM</span></div><div className="eyebrow">OpenMuse Studio / API workspace</div><h2>What should we make today?</h2><p>Start with a description, a melody, a demo, or a finished song. OpenMuse keeps every asset, edit and render connected to one project.</p></section>
             <section className="entry-grid">{entries.map(([number, title, sub, mode]) => <button className="entry" key={mode} onClick={() => setModal(mode)}><span>{number}</span><b>{title}</b><em>{sub}</em></button>)}</section>
-            <div className="empty" style={{ maxWidth: 850, margin: "0 auto" }}>No project is selected. Create one to start a real API-backed workspace.</div>
-          </>
+            <button className="welcome-composer" onClick={() => setModal("text")}><span className="composer-plus">+</span><span className="composer-placeholder">Describe a song, attach a demo, or ask for an MV...</span><kbd>Enter</kbd></button>
+          </div>
         )}
 
         {selected && (
           <>
+            <section className="session-banner"><div className="assistant-avatar">OM</div><div><strong>OpenMuse Studio</strong><p>{selected.description || "This project is ready for your next instruction."}</p></div><span>{activeJob ? `${statusLabel(activeJob.status)} ${activeJob.progress}%` : "ready"}</span></section>
             <section className="workspace">
               <div>
                 <div className="panel">
@@ -376,7 +378,7 @@ export default function Home() {
         )}
       </main>
 
-      <aside className="side">
+      <aside className="side context-pane">
         <div className="eyebrow" style={{ marginBottom: 22 }}>Live API state</div>
         <div className="side-section"><h4>Project</h4><div className="stat"><span>Mode</span><b>{selected?.creation_mode || "-"}</b></div><div className="stat"><span>Status</span><b>{selected ? statusLabel(selected.status) : "idle"}</b></div><div className="stat"><span>Provider</span><b>{activeMusicProvider ? `${activeMusicProvider.name} / ${activeMusicProvider.model}` : "loading"}</b></div><div className="stat"><span>Audio</span><b>{audio ? `${Math.round(audio.duration || 0)} sec` : "missing"}</b></div></div>
         <div className="side-section"><h4>Analysis</h4><div className="stat"><span>BPM</span><b>{analysis?.bpm ?? "-"}</b></div><div className="stat"><span>Key</span><b>{analysis?.key ?? "-"}</b></div><div className="stat"><span>Waveform</span><b>{waveform.length ? `${waveform.length} points` : "not analyzed"}</b></div></div>
